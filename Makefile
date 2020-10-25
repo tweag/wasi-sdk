@@ -88,7 +88,9 @@ build/llvm.BUILT:
 build/wasi-libc.BUILT: build/llvm.BUILT
 	$(MAKE) -C $(ROOT_DIR)/src/wasi-libc \
 		WASM_CC=$(BUILD_PREFIX)/bin/clang \
-		SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot
+		WASM_CFLAGS="-O3 -flto -DNDEBUG" \
+		SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot \
+		THREAD_MODEL=posix
 	touch build/wasi-libc.BUILT
 
 build/compiler-rt.BUILT: build/llvm.BUILT
@@ -104,7 +106,7 @@ build/compiler-rt.BUILT: build/llvm.BUILT
 		-DCOMPILER_RT_ENABLE_IOS=OFF \
 		-DCOMPILER_RT_DEFAULT_TARGET_ONLY=On \
 		-DWASI_SDK_PREFIX=$(BUILD_PREFIX) \
-		-DCMAKE_C_FLAGS="-O1 $(DEBUG_PREFIX_MAP)" \
+		-DCMAKE_C_FLAGS="-O3 -flto $(DEBUG_PREFIX_MAP)" \
 		-DLLVM_CONFIG_PATH=$(ROOT_DIR)/build/llvm/bin/llvm-config \
 		-DCOMPILER_RT_OS_DIR=wasi \
 		-DCMAKE_INSTALL_PREFIX=$(PREFIX)/lib/clang/$(CLANG_VERSION)/ \
@@ -138,14 +140,14 @@ LIBCXX_CMAKE_FLAGS = \
     -DWASI_SDK_PREFIX=$(BUILD_PREFIX) \
     --debug-trycompile
 
-    #-DCMAKE_STAGING_PREFIX= 
+    #-DCMAKE_STAGING_PREFIX=
 
 build/libcxx.BUILT: build/llvm.BUILT build/compiler-rt.BUILT build/wasi-libc.BUILT
 	# Do the build.
 	mkdir -p build/libcxx
 	cd build/libcxx && cmake -G Ninja $(LIBCXX_CMAKE_FLAGS) \
-	    -DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP)" \
-	    -DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP)" \
+	    -DCMAKE_C_FLAGS="-O3 -flto $(DEBUG_PREFIX_MAP)" \
+	    -DCMAKE_CXX_FLAGS="-O3 -flto $(DEBUG_PREFIX_MAP)" \
 	    -DLIBCXX_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
 	    $(LLVM_PROJ_DIR)/libcxx
 	ninja $(NINJA_FLAGS) -v -C build/libcxx
@@ -183,8 +185,8 @@ build/libcxxabi.BUILT: build/libcxx.BUILT build/llvm.BUILT
 	# Do the build.
 	mkdir -p build/libcxxabi
 	cd build/libcxxabi && cmake -G Ninja $(LIBCXXABI_CMAKE_FLAGS) \
-	    -DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP)" \
-	    -DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP)" \
+	    -DCMAKE_C_FLAGS="-O3 -flto $(DEBUG_PREFIX_MAP)" \
+	    -DCMAKE_CXX_FLAGS="-O3 -flto $(DEBUG_PREFIX_MAP)" \
 	    -DLIBCXXABI_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
 	    $(LLVM_PROJ_DIR)/libcxxabi
 	ninja $(NINJA_FLAGS) -v -C build/libcxxabi
