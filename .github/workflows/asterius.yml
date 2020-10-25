@@ -23,8 +23,8 @@ jobs:
             --network host \
             --pull always \
             --rm \
-            --workdir $(pwd) \
             --volume $(pwd):$(pwd) \
+            --workdir $(pwd) \
             debian:sid-slim \
             ./asterius_build.sh
 

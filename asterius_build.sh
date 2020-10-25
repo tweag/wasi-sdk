@@ -7,6 +7,7 @@ apt full-upgrade -y
 apt install -y \
   build-essential \
   cmake \
-  ninja-build
+  ninja-build \
+  python
 
 make package
