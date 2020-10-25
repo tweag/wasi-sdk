@@ -8,6 +8,6 @@ apt install -y \
   build-essential \
   cmake \
   ninja-build \
-  python
+  python2
 
 make package
