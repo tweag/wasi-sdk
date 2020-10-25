@@ -1,8 +1,9 @@
 # Any copyright is dedicated to the Public Domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
+LLVM_MAJOR_VER=11
+
 ROOT_DIR=${CURDIR}
-LLVM_PROJ_DIR?=$(ROOT_DIR)/src/llvm-project
 
 # Windows needs munging
 ifeq ($(OS),Windows_NT)
@@ -37,7 +38,7 @@ BASH=
 
 endif
 
-CLANG_VERSION=$(shell $(BASH) ./llvm_version.sh $(LLVM_PROJ_DIR))
+CLANG_VERSION=$(llvm-config-$(LLVM_MAJOR_VER) --version)
 VERSION:=$(shell $(BASH) ./version.sh)
 DEBUG_PREFIX_MAP=-fdebug-prefix-map=$(ROOT_DIR)=wasisdk://v$(VERSION)
 
@@ -45,55 +46,22 @@ default: build
 	@echo "Use -fdebug-prefix-map=$(ROOT_DIR)=wasisdk://v$(VERSION)"
 
 check:
-	CC="clang --sysroot=$(BUILD_PREFIX)/share/wasi-sysroot" \
-	CXX="clang++ --sysroot=$(BUILD_PREFIX)/share/wasi-sysroot" \
+	CC="clang-$(LLVM_MAJOR_VER) --target=wasm32-wasi --sysroot=$(BUILD_PREFIX)/share/wasi-sysroot" \
+	CXX="clang++-$(LLVM_MAJOR_VER) --target=wasm32-wasi --sysroot=$(BUILD_PREFIX)/share/wasi-sysroot" \
 	PATH="$(PATH_PREFIX)/bin:$$PATH" tests/run.sh
 
 clean:
 	rm -rf build $(DESTDIR)
 
-build/llvm.BUILT:
-	mkdir -p build/llvm
-	cd build/llvm && cmake -G Ninja \
-		-DCMAKE_BUILD_TYPE=MinSizeRel \
-		-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
-		-DLLVM_TARGETS_TO_BUILD=WebAssembly \
-		-DLLVM_DEFAULT_TARGET_TRIPLE=wasm32-wasi \
-		-DLLVM_ENABLE_PROJECTS="lld;clang;clang-tools-extra" \
-		-DDEFAULT_SYSROOT=$(PREFIX)/share/wasi-sysroot \
-		-DLLVM_INSTALL_BINUTILS_SYMLINKS=TRUE \
-		$(LLVM_PROJ_DIR)/llvm
-	DESTDIR=$(DESTDIR) ninja $(NINJA_FLAGS) -v -C build/llvm \
-		install-clang \
-		install-clang-format \
-		install-clang-tidy \
-		install-clang-apply-replacements \
-		install-lld \
-		install-llvm-ranlib \
-		install-llvm-strip \
-		install-llvm-dwarfdump \
-		install-clang-resource-headers \
-		install-ar \
-		install-ranlib \
-		install-strip \
-		install-nm \
-		install-size \
-		install-strings \
-		install-objdump \
-		install-objcopy \
-		install-c++filt \
-		llvm-config
-	touch build/llvm.BUILT
-
-build/wasi-libc.BUILT: build/llvm.BUILT
+build/wasi-libc.BUILT:
 	$(MAKE) -C $(ROOT_DIR)/src/wasi-libc \
-		WASM_CC=$(BUILD_PREFIX)/bin/clang \
+		WASM_CC=clang-$(LLVM_MAJOR_VER) \
 		WASM_CFLAGS="-O3 -flto -DNDEBUG" \
 		SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot \
 		THREAD_MODEL=posix
 	touch build/wasi-libc.BUILT
 
-build/compiler-rt.BUILT: build/llvm.BUILT
+build/compiler-rt.BUILT:
 	# Do the build, and install it.
 	mkdir -p build/compiler-rt
 	cd build/compiler-rt && cmake -G Ninja \
@@ -142,7 +110,7 @@ LIBCXX_CMAKE_FLAGS = \
 
     #-DCMAKE_STAGING_PREFIX=
 
-build/libcxx.BUILT: build/llvm.BUILT build/compiler-rt.BUILT build/wasi-libc.BUILT
+build/libcxx.BUILT: build/compiler-rt.BUILT build/wasi-libc.BUILT
 	# Do the build.
 	mkdir -p build/libcxx
 	cd build/libcxx && cmake -G Ninja $(LIBCXX_CMAKE_FLAGS) \
@@ -181,7 +149,7 @@ LIBCXXABI_CMAKE_FLAGS = \
     -DUNIX:BOOL=ON \
     --debug-trycompile
 
-build/libcxxabi.BUILT: build/libcxx.BUILT build/llvm.BUILT
+build/libcxxabi.BUILT: build/libcxx.BUILT
 	# Do the build.
 	mkdir -p build/libcxxabi
 	cd build/libcxxabi && cmake -G Ninja $(LIBCXXABI_CMAKE_FLAGS) \
@@ -201,9 +169,9 @@ build/config.BUILT:
 	cp wasi-sdk.cmake $(BUILD_PREFIX)/share/cmake
 	touch build/config.BUILT
 
-build: build/llvm.BUILT build/wasi-libc.BUILT build/compiler-rt.BUILT build/libcxxabi.BUILT build/libcxx.BUILT build/config.BUILT
+build: build/wasi-libc.BUILT build/compiler-rt.BUILT build/libcxxabi.BUILT build/libcxx.BUILT build/config.BUILT
 
-strip: build/llvm.BUILT
+strip:
 	./strip_symbols.sh $(BUILD_PREFIX)
 
 package: build/package.BUILT
