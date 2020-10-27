@@ -1,0 +1,35 @@
+name: Asterius
+
+on:
+  - push
+  - pull_request
+
+jobs:
+
+  build:
+    name: build
+    runs-on: ubuntu-20.04
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 32
+          submodules: recursive
+
+      - name: build
+        run: |
+          podman run \
+            --network host \
+            --pull always \
+            --rm \
+            --volume $(pwd):$(pwd) \
+            --workdir $(pwd) \
+            debian:sid-slim \
+            ./asterius_build.sh
+
+      - name: upload-artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-asterius
+          path: dist
