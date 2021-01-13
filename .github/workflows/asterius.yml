@@ -1,0 +1,47 @@
+name: Asterius
+
+on:
+  - push
+  - pull_request
+
+jobs:
+
+  build:
+    name: build-threads-${{ matrix.threads }}
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        threads:
+          - ON
+          - OFF
+    env:
+      threads: ${{ matrix.threads }}
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: build
+        run: |
+          if [ $threads == ON ]; then
+            git apply -v enable_threads.patch
+          fi
+
+          podman run \
+            --network host \
+            --pull always \
+            --rm \
+            --volume $(pwd):$(pwd) \
+            --workdir $(pwd) \
+            debian:sid-slim \
+            ./asterius_build.sh
+
+      - name: upload-artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-asterius-threads-${{ matrix.threads }}
+          path: dist
