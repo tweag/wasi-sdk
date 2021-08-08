@@ -55,11 +55,12 @@ clean:
 build/llvm.BUILT:
 	mkdir -p build/llvm
 	cd build/llvm && cmake -G Ninja \
-		-DCMAKE_BUILD_TYPE=MinSizeRel \
+		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
 		-DLLVM_TARGETS_TO_BUILD=WebAssembly \
 		-DLLVM_DEFAULT_TARGET_TRIPLE=wasm32-wasi \
-		-DLLVM_ENABLE_PROJECTS="lld;clang;clang-tools-extra" \
+		-DLLVM_ENABLE_PIC=OFF \
+		-DLLVM_ENABLE_PROJECTS="lld;clang" \
 		$(if $(patsubst 9.%,,$(CLANG_VERSION)), \
 	             $(if $(patsubst 10.%,,$(CLANG_VERSION)), \
 		          -DDEFAULT_SYSROOT=../share/wasi-sysroot, \
@@ -69,9 +70,7 @@ build/llvm.BUILT:
 		$(LLVM_PROJ_DIR)/llvm
 	DESTDIR=$(DESTDIR) ninja $(NINJA_FLAGS) -C build/llvm \
 		install-clang \
-		install-clang-format \
-		install-clang-tidy \
-		install-clang-apply-replacements \
+		install-llvm-dis \
 		install-lld \
 		install-llvm-ranlib \
 		install-llvm-strip \
@@ -104,7 +103,7 @@ build/compiler-rt.BUILT: build/llvm.BUILT build/wasi-libc.BUILT
 		-DCMAKE_CXX_COMPILER_WORKS=ON \
 		-DCMAKE_AR=$(BUILD_PREFIX)/bin/ar \
 		-DCMAKE_MODULE_PATH=$(ROOT_DIR)/cmake \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_BUILD_TYPE=MinSizeRel \
 		-DCMAKE_TOOLCHAIN_FILE=$(ROOT_DIR)/wasi-sdk.cmake \
 		-DCOMPILER_RT_BAREMETAL_BUILD=On \
 		-DCOMPILER_RT_BUILD_XRAY=OFF \
@@ -113,7 +112,7 @@ build/compiler-rt.BUILT: build/llvm.BUILT build/wasi-libc.BUILT
 		-DCOMPILER_RT_ENABLE_IOS=OFF \
 		-DCOMPILER_RT_DEFAULT_TARGET_ONLY=On \
 		-DWASI_SDK_PREFIX=$(BUILD_PREFIX) \
-		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP)" \
+		-DCMAKE_C_FLAGS="-Oz -flto $(DEBUG_PREFIX_MAP)" \
 		-DLLVM_CONFIG_PATH=$(ROOT_DIR)/build/llvm/bin/llvm-config \
 		-DCOMPILER_RT_OS_DIR=wasi \
 		-DCMAKE_INSTALL_PREFIX=$(PREFIX)/lib/clang/$(CLANG_VERSION)/ \
@@ -139,7 +138,7 @@ LIBCXX_CMAKE_FLAGS = \
     -DLIBCXX_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
     -DLIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
     -DLIBCXX_HAS_WIN32_THREAD_API:BOOL=OFF \
-    -DCMAKE_BUILD_TYPE=RelWithDebugInfo \
+    -DCMAKE_BUILD_TYPE=MinSizeRel \
     -DLIBCXX_ENABLE_SHARED:BOOL=OFF \
     -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS:BOOL=OFF \
@@ -156,8 +155,8 @@ build/libcxx.BUILT: build/llvm.BUILT build/compiler-rt.BUILT build/wasi-libc.BUI
 	mkdir -p build/libcxx
 	cd build/libcxx && cmake -G Ninja $(LIBCXX_CMAKE_FLAGS) \
 		-DCMAKE_SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot \
-		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP) \
-		-DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP) \
+		-DCMAKE_C_FLAGS="-Oz -flto $(DEBUG_PREFIX_MAP)" \
+		-DCMAKE_CXX_FLAGS="-Oz -flto $(DEBUG_PREFIX_MAP)" \
 		-DLIBCXX_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
 		$(LLVM_PROJ_DIR)/libcxx
 	ninja $(NINJA_FLAGS) -C build/libcxx
@@ -180,10 +179,11 @@ LIBCXXABI_CMAKE_FLAGS = \
     -DLIBCXXABI_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
     -DLIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
     -DLIBCXXABI_HAS_WIN32_THREAD_API:BOOL=OFF \
-    -DLIBCXXABI_ENABLE_PIC:BOOL=OFF \
+    -DLIBCXXABI_ENABLE_ASSERTIONS:BOOL=OFF \
+    -DLIBCXXABI_BAREMETAL:BOOL=ON \
     -DCXX_SUPPORTS_CXX11=ON \
     -DLLVM_COMPILER_CHECKED=ON \
-    -DCMAKE_BUILD_TYPE=RelWithDebugInfo \
+    -DCMAKE_BUILD_TYPE=MinSizeRel \
     -DLIBCXXABI_LIBCXX_PATH=$(LLVM_PROJ_DIR)/libcxx \
     -DLIBCXXABI_LIBCXX_INCLUDES=$(BUILD_PREFIX)/share/wasi-sysroot/include/c++/v1 \
     -DLLVM_CONFIG_PATH=$(ROOT_DIR)/build/llvm/bin/llvm-config \
@@ -198,8 +198,8 @@ build/libcxxabi.BUILT: build/libcxx.BUILT build/llvm.BUILT
 	mkdir -p build/libcxxabi
 	cd build/libcxxabi && cmake -G Ninja $(LIBCXXABI_CMAKE_FLAGS) \
 		-DCMAKE_SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot \
-		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP) \
-		-DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP) \
+		-DCMAKE_C_FLAGS="-Oz -flto $(DEBUG_PREFIX_MAP)" \
+		-DCMAKE_CXX_FLAGS="-Oz -flto $(DEBUG_PREFIX_MAP)" \
 		-DLIBCXXABI_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
 		$(LLVM_PROJ_DIR)/libcxxabi
 	ninja $(NINJA_FLAGS) -C build/libcxxabi
