@@ -28,7 +28,7 @@ echo $CC
 echo $CXX
 
 cd $testdir/compile-only
-for options in -O0 -O2 "-O2 -flto"; do
+for options in -O0 -Oz "-Oz -flto"; do
     echo "===== Testing compile-only with $options ====="
     for file in *.c; do
         echo "Testing compile-only $file..."
@@ -42,7 +42,7 @@ done
 cd - >/dev/null
 
 cd $testdir/general
-for options in -O0 -O2 "-O2 -flto"; do
+for options in -O0 -Oz "-Oz -flto"; do
     echo "===== Testing with $options ====="
     for file in *.c; do
         echo "Testing $file..."
