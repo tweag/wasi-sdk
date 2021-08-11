@@ -2,7 +2,7 @@
 # and avoid depending on more recent version of, say, libc.
 # Here we choose Xenial 16.04 which mean we also support Debian from stretch
 # (releases 2017) onwards.
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
