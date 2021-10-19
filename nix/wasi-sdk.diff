@@ -1,0 +1,15 @@
+--- a/Makefile
++++ b/Makefile
+@@ -56,9 +56,12 @@
+ 	mkdir -p build/llvm
+ 	cd build/llvm && cmake -G Ninja \
+ 		-DCMAKE_BUILD_TYPE=Release \
++		-DCMAKE_EXE_LINKER_FLAGS="-static" \
+ 		-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
+ 		-DLLVM_TARGETS_TO_BUILD=WebAssembly \
+ 		-DLLVM_DEFAULT_TARGET_TRIPLE=wasm32-wasi \
++		-DLLVM_ENABLE_LLD=ON \
++		-DLLVM_ENABLE_LTO=Full \
+ 		-DLLVM_ENABLE_PIC=OFF \
+ 		-DLLVM_ENABLE_PROJECTS="lld;clang" \
+ 		$(if $(patsubst 9.%,,$(CLANG_VERSION)), \
