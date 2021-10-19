@@ -1,0 +1,53 @@
+name: asterius
+
+on:
+  - push
+  - pull_request
+
+jobs:
+
+  nix:
+    name: nix-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-11
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 64
+          submodules: recursive
+
+      - name: setup-nix
+        uses: cachix/install-nix-action@v14.1
+
+      - name: setup-cachix
+        uses: cachix/cachix-action@v10
+        with:
+          name: asterius
+          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+
+      - name: cachix-watch-store
+        run: |
+          cachix watch-store -c9 asterius &
+
+      - name: build
+        run: |
+          nix-build --no-out-link nix/default.nix
+
+      - name: build-artifact
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cp $(nix-build --no-out-link nix/dist.nix) wasi-sdk.tar.zst
+
+      - name: upload-artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-${{ matrix.os }}
+          path: wasi-sdk.tar.zst
