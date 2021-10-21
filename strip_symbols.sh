@@ -5,7 +5,7 @@ DIRECTORY=${1:-/opt/wasi-sdk/bin}
 if [[ "$OSTYPE" == "darwin"* ]]; then
 # macos find doesnt support -executable so we fall back on having a permission
 # bit to execute:
-EXECUTABLES=$(find ${DIRECTORY} -type f -perm +111)
+EXECUTABLES=$(find ${DIRECTORY} -type f -perm /111)
 else
 EXECUTABLES=$(find ${DIRECTORY} -type f -executable)
 fi
