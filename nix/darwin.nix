@@ -10,6 +10,7 @@ pkgs.callPackage
         name = "wasi-sdk-src";
         src = ../.;
       };
+      patches = [ ./llvm-a99fb86.patch ];
       postPatch = "patchShebangs tests ./*.sh";
       dontConfigure = true;
       hardeningDisable = [ "all" ];

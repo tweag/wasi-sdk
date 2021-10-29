@@ -17,7 +17,7 @@ pkgs.pkgsCross.musl64.callPackage
         name = "wasi-sdk-src";
         src = ../.;
       };
-      patches = [ ./wasi-sdk.diff ];
+      patches = [ ./llvm-a99fb86.patch ./wasi-sdk.diff ];
       postPatch = "patchShebangs tests ./*.sh";
       dontConfigure = true;
       hardeningDisable = [ "all" ];
