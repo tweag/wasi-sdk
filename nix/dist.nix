@@ -1,4 +1,7 @@
-{ sources ? import ./sources.nix { }, pkgs ? import haskellNix.sources.nixpkgs-unstable { } }:
+{ sources ? import ./sources.nix { }
+, haskellNix ? import sources.haskell-nix { }
+, pkgs ? import haskellNix.sources.nixpkgs-unstable { }
+}:
 pkgs.callPackage
   ({ runCommand, zstd }:
     runCommand "wasi-sdk-dist" { nativeBuildInputs = [ zstd ]; }
