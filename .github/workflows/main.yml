@@ -22,6 +22,12 @@ jobs:
       - uses: actions/checkout@v1
         with:
           submodules: true
+      - name: patch-llvm
+        run: |
+          pushd src/llvm-project
+          git apply ../../0001-clang-WebAssembly-Pass-Wa-no-type-check-through-to-t.patch
+          git apply ../../0002-clang-no-wasm-opt.diff
+          popd
       - name: Install ninja (macOS)
         run: brew install ninja
         if: matrix.os == 'macos-latest'
