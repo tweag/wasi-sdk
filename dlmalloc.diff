@@ -1,0 +1,31 @@
+diff --git a/dlmalloc/src/dlmalloc.c b/dlmalloc/src/dlmalloc.c
+index 331536b..945b455 100644
+--- a/dlmalloc/src/dlmalloc.c
++++ b/dlmalloc/src/dlmalloc.c
+@@ -59,6 +59,12 @@ extern const int __EINVAL;
+ // This isn't declared with DLMALLOC_EXPORT so make it static explicitly.
+ static size_t dlmalloc_usable_size(void*);
+ 
++#define DEFAULT_GRANULARITY (1 << 20)
++
++#define INSECURE 1
++
++#define MORECORE_CONTIGUOUS 0
++
+ // Include the upstream dlmalloc's malloc.c.
+ #include "malloc.c"
+ 
+diff --git a/dlmalloc/src/malloc.c b/dlmalloc/src/malloc.c
+index 03da739..1e2d8ac 100644
+--- a/dlmalloc/src/malloc.c
++++ b/dlmalloc/src/malloc.c
+@@ -4054,7 +4054,8 @@ static void* sys_alloc(mstate m, size_t nb) {
+       return mem;
+   }
+ 
+-  asize = granularity_align(nb + SYS_ALLOC_PADDING);
++  size_t __base = (size_t)CALL_MORECORE(0);
++  asize = granularity_align(__base + nb + SYS_ALLOC_PADDING) - __base;
+ #ifdef __wasilibc_unmodified_upstream // Bug fix: set ENOMEM on size overflow
+   if (asize <= nb)
+     return 0; /* wraparound */
