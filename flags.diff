@@ -1,0 +1,93 @@
+diff --git a/Makefile b/Makefile
+index c5a47a2..2bbc1ab 100644
+--- a/Makefile
++++ b/Makefile
+@@ -55,7 +55,7 @@ clean:
+ build/llvm.BUILT:
+ 	mkdir -p build/llvm
+ 	cd build/llvm && cmake -G Ninja \
+-		-DCMAKE_BUILD_TYPE=MinSizeRel \
++		-DCMAKE_BUILD_TYPE=Release \
+ 		-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
+ 		-DLLVM_TARGETS_TO_BUILD=WebAssembly \
+ 		-DLLVM_DEFAULT_TARGET_TRIPLE=wasm32-wasi \
+@@ -108,7 +108,7 @@ build/compiler-rt.BUILT: build/llvm.BUILT build/wasi-libc.BUILT
+ 		-DCMAKE_CXX_COMPILER_WORKS=ON \
+ 		-DCMAKE_AR=$(BUILD_PREFIX)/bin/ar \
+ 		-DCMAKE_MODULE_PATH=$(ROOT_DIR)/cmake \
+-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
++		-DCMAKE_BUILD_TYPE=Release \
+ 		-DCMAKE_TOOLCHAIN_FILE=$(ROOT_DIR)/wasi-sdk.cmake \
+ 		-DCOMPILER_RT_BAREMETAL_BUILD=On \
+ 		-DCOMPILER_RT_BUILD_XRAY=OFF \
+@@ -117,7 +117,7 @@ build/compiler-rt.BUILT: build/llvm.BUILT build/wasi-libc.BUILT
+ 		-DCOMPILER_RT_ENABLE_IOS=OFF \
+ 		-DCOMPILER_RT_DEFAULT_TARGET_ONLY=On \
+ 		-DWASI_SDK_PREFIX=$(BUILD_PREFIX) \
+-		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP)" \
++		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP) -mnontrapping-fptoint -msign-ext -mbulk-memory -mmutable-globals -mreference-types" \
+ 		-DLLVM_CONFIG_PATH=$(ROOT_DIR)/build/llvm/bin/llvm-config \
+ 		-DCOMPILER_RT_OS_DIR=wasi \
+ 		-DCMAKE_INSTALL_PREFIX=$(PREFIX)/lib/clang/$(CLANG_VERSION)/ \
+@@ -145,7 +145,7 @@ LIBCXX_CMAKE_FLAGS = \
+     -DLIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
+     -DLIBCXX_HAS_WIN32_THREAD_API:BOOL=OFF \
+     -DLLVM_COMPILER_CHECKED=ON \
+-    -DCMAKE_BUILD_TYPE=RelWithDebugInfo \
++    -DCMAKE_BUILD_TYPE=Release \
+     -DLIBCXX_ENABLE_SHARED:BOOL=OFF \
+     -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL=OFF \
+     -DLIBCXX_ENABLE_EXCEPTIONS:BOOL=OFF \
+@@ -172,8 +172,8 @@ build/libcxx.BUILT: build/llvm.BUILT build/compiler-rt.BUILT build/wasi-libc.BUI
+ 	mkdir -p build/libcxx
+ 	cd build/libcxx && cmake -G Ninja $(LIBCXX_CMAKE_FLAGS) \
+ 		-DCMAKE_SYSROOT=$(BUILD_PREFIX)/share/wasi-sysroot \
+-		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP)" \
+-		-DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP)" \
++		-DCMAKE_C_FLAGS="$(DEBUG_PREFIX_MAP) -mnontrapping-fptoint -msign-ext -mbulk-memory -mmutable-globals -mreference-types" \
++		-DCMAKE_CXX_FLAGS="$(DEBUG_PREFIX_MAP) -mnontrapping-fptoint -msign-ext -mbulk-memory -mmutable-globals -mreference-types" \
+ 		-DLIBCXX_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
+ 		-DLIBCXXABI_LIBDIR_SUFFIX=$(ESCAPE_SLASH)/wasm32-wasi \
+ 		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+Submodule src/wasi-libc contains modified content
+diff --git a/src/wasi-libc/Makefile b/src/wasi-libc/Makefile
+index 50519fd..060fc36 100644
+--- a/src/wasi-libc/Makefile
++++ b/src/wasi-libc/Makefile
+@@ -8,7 +8,7 @@ NM ?= $(patsubst %clang,%llvm-nm,$(filter-out ccache sccache,$(CC)))
+ ifeq ($(origin AR), default)
+ AR = $(patsubst %clang,%llvm-ar,$(filter-out ccache sccache,$(CC)))
+ endif
+-EXTRA_CFLAGS ?= -O2 -DNDEBUG
++EXTRA_CFLAGS ?= -O3 -DNDEBUG -mnontrapping-fptoint -msign-ext -mbulk-memory -mmutable-globals -mreference-types
+ # The directory where we build the sysroot.
+ SYSROOT ?= $(CURDIR)/sysroot
+ # A directory to install to for "make install".
+diff --git a/src/wasi-libc/expected/wasm32-wasi/single/predefined-macros.txt b/src/wasi-libc/expected/wasm32-wasi/single/predefined-macros.txt
+index 1f7b341..5148b30 100644
+--- a/src/wasi-libc/expected/wasm32-wasi/single/predefined-macros.txt
++++ b/src/wasi-libc/expected/wasm32-wasi/single/predefined-macros.txt
+@@ -3061,6 +3061,11 @@
+ #define __wasm32 1
+ #define __wasm32__ 1
+ #define __wasm__ 1
++#define __wasm_bulk_memory__ 1
++#define __wasm_mutable_globals__ 1
++#define __wasm_nontrapping_fptoint__ 1
++#define __wasm_reference_types__ 1
++#define __wasm_sign_ext__ 1
+ #define _tolower(a) ((a)|0x20)
+ #define _toupper(a) ((a)&0x5f)
+ #define acos(x) __tg_real_complex(acos, (x))
+diff --git a/src/wasi-libc/expected/wasm32-wasi/single/undefined-symbols.txt b/src/wasi-libc/expected/wasm32-wasi/single/undefined-symbols.txt
+index b9cdb34..68db1a7 100644
+--- a/src/wasi-libc/expected/wasm32-wasi/single/undefined-symbols.txt
++++ b/src/wasi-libc/expected/wasm32-wasi/single/undefined-symbols.txt
+@@ -56,6 +56,7 @@ __imported_wasi_snapshot_preview1_sock_accept
+ __imported_wasi_snapshot_preview1_sock_recv
+ __imported_wasi_snapshot_preview1_sock_send
+ __imported_wasi_snapshot_preview1_sock_shutdown
++__indirect_function_table
+ __letf2
+ __lttf2
+ __main_argc_argv

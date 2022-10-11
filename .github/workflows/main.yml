@@ -33,6 +33,9 @@ jobs:
           pushd src/wasi-libc
           git apply ../../dlmalloc.diff
           popd
+      - name: patch-flags
+        run: |
+          git apply ./flags.diff
       - name: Install ninja (macOS)
         run: brew install ninja
         if: matrix.os == 'macos-latest'
