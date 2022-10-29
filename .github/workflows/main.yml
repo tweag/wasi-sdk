@@ -48,11 +48,10 @@ jobs:
       - name: Run the testsuite
         run: NINJA_FLAGS=-v make check
       - name: Upload artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
-          # Upload the dist folder. Give it a name according to the OS it was built for.
           name: ${{ format( 'dist-{0}', matrix.os) }}
-          path: dist
+          path: dist/wasi-sdk-*.tar.gz
 
   winbuild:
     name: Windows Build
